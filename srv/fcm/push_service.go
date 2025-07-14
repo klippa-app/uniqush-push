@@ -10,9 +10,10 @@ import (
 	"strings"
 	"time"
 
+	"firebase.google.com/go/v4/errorutils"
 	"firebase.google.com/go/v4/messaging"
-	"github.com/appleboy/go-fcm"
 
+	"github.com/appleboy/go-fcm"
 	"github.com/uniqush/uniqush-push/push"
 )
 
@@ -93,12 +94,13 @@ func (ps *pushService) ToPayload(notif *push.Notification, regIds []string) (*me
 	postData := notif.Data
 	payload := new(messaging.MulticastMessage)
 	payload.Tokens = regIds
+	payload.Android = &messaging.AndroidConfig{}
 
 	// TTL: default is one hour
 	ttl := time.Second * (60 * 60)
 
 	// This option is gone in the new API.
-	//payload.DelayWhileIdle = false
+	// payload.DelayWhileIdle = false
 
 	if mgroup, ok := postData["msggroup"]; ok {
 		payload.Android.CollapseKey = mgroup
@@ -239,8 +241,10 @@ func (psb *pushService) handleMulticastResults(psp *push.PushServiceProvider, dp
 			if r.Error != nil {
 				errmsg := r.Error.Error()
 
-				switch errmsg {
-				case "QUOTA_EXCEEDED", "UNAVAILABLE", "INTERNAL":
+				switch {
+				case errorutils.IsResourceExhausted(r.Error),
+					errorutils.IsUnavailable(r.Error),
+					errorutils.IsInternal(r.Error):
 					after, _ := time.ParseDuration("2s")
 					res := new(push.Result)
 					res.Provider = psp
@@ -248,7 +252,7 @@ func (psb *pushService) handleMulticastResults(psp *push.PushServiceProvider, dp
 					res.Destination = dp
 					res.Err = push.NewRetryError(psp, dp, notif, after)
 					resQueue <- res
-				case "UNREGISTERED":
+				case errorutils.IsNotFound(r.Error):
 					res := new(push.Result)
 					res.Provider = psp
 					res.Err = push.NewUnsubscribeUpdate(psp, dp)
@@ -283,6 +287,24 @@ func (psb *pushService) handleMulticastResults(psp *push.PushServiceProvider, dp
 }
 
 func (ps *pushService) multicast(psp *push.PushServiceProvider, dpList []*push.DeliveryPoint, resQueue chan<- *push.Result, notif *push.Notification) {
+
+	psp.Lock.Lock()
+
+	if psp.Data[ClientKey] == nil {
+		client, err := fcm.NewClient(
+			context.Background(),
+			fcm.WithCredentialsFile(psp.FixedData["credentialsfile"]),
+		)
+		if err != nil {
+			sendErrToEachDP(psp, dpList, resQueue, notif, push.NewErrorf("could not initialize FCM client: %v", err))
+			return
+		}
+
+		psp.Data[ClientKey] = client
+	}
+
+	psp.Lock.Unlock()
+
 	if len(dpList) == 0 {
 		return
 	}
