@@ -121,13 +121,13 @@ func (p *PushPeer) Marshal() []byte {
 
 // Unmarshal unserializes the structure embedding this push peer from JSON (which was retrieved from the database).
 func (p *PushPeer) Unmarshal(value []byte) error {
-	//var f interface{}
+	// var f interface{}
 
 	var f []map[string]string
 
 	err := json.Unmarshal(value, &f)
 	if err != nil {
-		//fmt.Printf("Error Unmarshal: %v\n", err)
+		// fmt.Printf("Error Unmarshal: %v\n", err)
 		return err
 	}
 
@@ -199,12 +199,15 @@ func (dp *DeliveryPoint) addVolatileData(kv map[string]string) error {
 // PushServiceProvider contains the data needed to send pushes to an external push notifications service provider (certificates, pushservicetype, server address, etc.).
 type PushServiceProvider struct { // nolint: golint
 	PushPeer
+	Data map[string]any
+	Lock sync.Mutex
 }
 
 // NewEmptyPushServiceProvider initializes the data structures of this push service provider, which will be populated by the caller.
 func NewEmptyPushServiceProvider() *PushServiceProvider {
 	psp := new(PushServiceProvider)
 	psp.InitPushPeer()
+	psp.Data = map[string]any{}
 	return psp
 }
 
