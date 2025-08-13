@@ -23,3 +23,5 @@ RUN mkdir /etc/uniqush/ \
 EXPOSE 9898
 
 CMD ["/usr/bin/uniqush-push"]
+
+HEALTHCHECK CMD curl -f http://localhost:9898/version || exit 1
