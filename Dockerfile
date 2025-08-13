@@ -1,17 +1,22 @@
-FROM centos:7
-MAINTAINER Misha Nasledov <misha@nasledov.com>
+FROM golang:1.24-alpine AS builder
 
-RUN /usr/bin/yum -y install golang git gcc make mercurial-hgk wget
+COPY . /go/src/uniqush-push/
+WORKDIR /go/src/uniqush-push
 
-ENV GOBIN /tmp/bin
-ENV GOPATH /tmp
+# Build go binary, don't use CGO as that won't run in Alpine.
+RUN CGO_ENABLED=0 go build -v
 
-RUN go get github.com/uniqush/uniqush-push
+FROM alpine:3.22
+
+RUN apk --no-cache add ca-certificates
+
+COPY --from=builder /go/src/uniqush-push/uniqush-push /usr/bin/uniqush-push
+
+WORKDIR /app
 
 COPY conf/uniqush-push.conf .
 
-RUN cp /tmp/bin/uniqush-push /usr/bin \
-    && mkdir /etc/uniqush/ \
+RUN mkdir /etc/uniqush/ \
     && cp ./uniqush-push.conf /etc/uniqush/ \
     && sed -i -e 's/localhost/0.0.0.0/' /etc/uniqush/uniqush-push.conf
 
