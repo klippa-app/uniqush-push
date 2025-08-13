@@ -8,7 +8,7 @@ RUN CGO_ENABLED=0 go build -v
 
 FROM alpine:3.22
 
-RUN apk --no-cache add ca-certificates
+RUN apk --no-cache add ca-certificates curl
 
 COPY --from=builder /go/src/uniqush-push/uniqush-push /usr/bin/uniqush-push
 
