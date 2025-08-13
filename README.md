@@ -1,3 +1,9 @@
+## Fork  notes
+
+This fork has been created by Klippa to make uniqush support the new FCM API.
+
+# Uniqush-push
+
 - [Homepage](http://uniqush.org)
 - [Download](http://uniqush.org/downloads.html)
 - [Blog/News](http://blog.uniqush.org)
