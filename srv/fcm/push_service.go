@@ -14,6 +14,7 @@ import (
 	"firebase.google.com/go/v4/messaging"
 
 	"github.com/appleboy/go-fcm"
+
 	"github.com/uniqush/uniqush-push/push"
 )
 
@@ -54,14 +55,14 @@ func (ps *pushService) BuildPushServiceProviderFromMap(kv map[string]string, psp
 	}
 
 	if credentialsFile, ok := kv["credentialsfile"]; ok && len(credentialsFile) > 0 {
-		psp.FixedData["credentialsfile"] = credentialsFile
+		psp.VolatileData["credentialsfile"] = credentialsFile
 	} else {
 		return errors.New("NoCredentialsFile")
 	}
 
 	client, err := fcm.NewClient(
 		context.Background(),
-		fcm.WithCredentialsFile(psp.FixedData["credentialsfile"]),
+		fcm.WithCredentialsFile(psp.VolatileData["credentialsfile"]),
 	)
 	if err != nil {
 		return fmt.Errorf("could not initialize FCM client: %w", err)
@@ -293,7 +294,7 @@ func (ps *pushService) multicast(psp *push.PushServiceProvider, dpList []*push.D
 	if psp.Data[ClientKey] == nil {
 		client, err := fcm.NewClient(
 			context.Background(),
-			fcm.WithCredentialsFile(psp.FixedData["credentialsfile"]),
+			fcm.WithCredentialsFile(psp.VolatileData["credentialsfile"]),
 		)
 		if err != nil {
 			sendErrToEachDP(psp, dpList, resQueue, notif, push.NewErrorf("could not initialize FCM client: %v", err))
